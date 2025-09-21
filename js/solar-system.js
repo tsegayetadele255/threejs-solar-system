@@ -568,10 +568,10 @@ class SolarSystem {
         });
         
         // Toggle buttons
-        document.getElementById('toggle-labels').addEventListener('click', () => {
-            this.showLabels = !this.showLabels;
-            this.updateLabelsVisibility();
-        });
+        // document.getElementById('toggle-labels').addEventListener('click', () => {
+        //     this.showLabels = !this.showLabels;
+        //     this.updateLabelsVisibility();
+        // });
         
         document.getElementById('toggle-orbits').addEventListener('click', () => {
             this.showOrbits = !this.showOrbits;

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive 3D Solar System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="container">
+        <canvas id="solar-system"></canvas>
+        
+        <!-- UI Controls -->
+        <div id="ui-panel">
+          <div id="panel-content" class="panel-content">
+            <button id="toggle-panel" class="toggle-btn" title="Minimize/Maximize">−</button>
+            <h2 id="ui-panel-header" class="draggable-header">
+                <span class="drag-icon">⋮⋮</span>
+                Solar System Explorer
+            </h2>
+                <div class="controls">
+                    <button id="toggle-orbits">Orbits</button>
+                    <button id="toggle-labels">Labels</button>
+                </div>
+                <div class="speed-control">
+                    <label for="speed-slider">Speed:</label>
+                    <input type="range" id="speed-slider" min="0" max="5" step="0.1" value="1">
+                    <span id="speed-value">1x</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Information Panel -->
+        <div id="info-panel" class="hidden">
+            <div id="info-content">
+                <h3 id="info-title"></h3>
+                <p id="info-description"></p>
+                <div id="info-stats"></div>
+                <button id="close-info">×</button>
+            </div>
+        </div>
+
+        <!-- Loading Screen -->
+        <div id="loading-screen">
+            <div class="loading-content">
+                <h2>Loading Solar System...</h2>
+                <div class="loading-bar">
+                    <div class="loading-progress"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fast local loading with embedded THREE.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+    // Simple progress and initialization
+    (function() {
+      const progressBar = document.querySelector('.loading-progress');
+      let progress = 0;
+      
+      function updateProgress(percent) {
+        if (progressBar) {
+          progressBar.style.width = percent + '%';
+        }
+      }
+      
+      // Simulate loading progress
+      const interval = setInterval(() => {
+        progress += 20;
+        updateProgress(progress);
+        if (progress >= 100) {
+          clearInterval(interval);
+          console.log('Loading complete, initializing...');
+        }
+      }, 200);
+      
+      // Load app scripts quickly
+      setTimeout(() => {
+        const scripts = [
+          'js/celestial-data.js?v=9',
+          'js/shaders.js?v=9', 
+          'js/solar-system.js?v=9'
+        ];
+        
+        let loaded = 0;
+        scripts.forEach((src, index) => {
+          const script = document.createElement('script');
+          script.src = src;
+          script.onload = () => {
+            loaded++;
+            if (loaded === scripts.length) {
+              console.log('All app scripts loaded');
+              // Initialize after a short delay
+              setTimeout(() => {
+                if (typeof initializeSolarSystem === 'function') {
+                  initializeSolarSystem();
+                } else {
+                  console.error('initializeSolarSystem function not found');
+                }
+              }, 100);
+            }
+          };
+          script.onerror = () => {
+            console.error('Failed to load:', src);
+          };
+          document.head.appendChild(script);
+        });
+      }, 500);
+    })();
+    </script>
+</body>
+</html>

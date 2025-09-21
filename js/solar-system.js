@@ -175,11 +175,17 @@ class SolarSystem {
         
         starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         
+        // Boost star visibility for small screens (mobile/tablet)
+        let starSize = 0.5, starOpacity = 0.8;
+        if (window.innerWidth < 900) {
+            starSize = 1.2; // larger stars for mobile
+            starOpacity = 1.0; // brighter
+        }
         const starMaterial = new THREE.PointsMaterial({
             color: 0xffffff,
-            size: 0.5,
+            size: starSize,
             transparent: true,
-            opacity: 0.8
+            opacity: starOpacity
         });
         
         this.starField = new THREE.Points(starGeometry, starMaterial);

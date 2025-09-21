@@ -431,6 +431,88 @@ class SolarSystem {
         this.controls.dampingFactor = 0.05;
         this.controls.minDistance = 2;
         this.controls.maxDistance = 500;
+        
+        // Enable touch controls for OrbitControls
+        this.controls.enableZoom = true;
+        this.controls.enableRotate = true;
+        this.controls.enablePan = true;
+        
+        // Add custom touch zoom support for better mobile experience
+        this.addTouchZoomSupport(this.controls, this.renderer.domElement);
+    }
+
+    // Enhanced touch zoom support for OrbitControls
+    addTouchZoomSupport(controls, domElement) {
+        let touches = [];
+        let lastTouchDistance = 0;
+        let isTouchZooming = false;
+
+        function getTouchDistance(touch1, touch2) {
+            const dx = touch1.clientX - touch2.clientX;
+            const dy = touch1.clientY - touch2.clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function onTouchStart(e) {
+            touches = Array.from(e.touches);
+            
+            if (touches.length === 2) {
+                // Two finger touch - prepare for enhanced pinch zoom
+                isTouchZooming = true;
+                lastTouchDistance = getTouchDistance(touches[0], touches[1]);
+                e.preventDefault(); // Prevent default zoom behavior
+            }
+        }
+
+        function onTouchMove(e) {
+            touches = Array.from(e.touches);
+            
+            if (touches.length === 2 && isTouchZooming) {
+                // Handle enhanced pinch-to-zoom
+                const currentDistance = getTouchDistance(touches[0], touches[1]);
+                const distanceChange = currentDistance - lastTouchDistance;
+                
+                if (Math.abs(distanceChange) > 2) { // Threshold to prevent jitter
+                    const zoomFactor = 1 + (distanceChange * 0.008); // Smooth zoom sensitivity
+                    
+                    // Get current camera distance
+                    const currentDistance = controls.object.position.distanceTo(controls.target);
+                    const newDistance = currentDistance / zoomFactor;
+                    
+                    // Apply zoom limits
+                    const clampedDistance = THREE.MathUtils.clamp(
+                        newDistance,
+                        controls.minDistance,
+                        controls.maxDistance
+                    );
+                    
+                    // Calculate zoom direction
+                    const direction = new THREE.Vector3()
+                        .subVectors(controls.object.position, controls.target)
+                        .normalize();
+                    
+                    // Set new camera position
+                    controls.object.position.copy(controls.target)
+                        .add(direction.multiplyScalar(clampedDistance));
+                    
+                    lastTouchDistance = currentDistance;
+                    e.preventDefault();
+                }
+            }
+        }
+
+        function onTouchEnd(e) {
+            touches = Array.from(e.touches);
+            
+            if (touches.length < 2) {
+                isTouchZooming = false;
+            }
+        }
+
+        // Add enhanced touch event listeners
+        domElement.addEventListener('touchstart', onTouchStart, { passive: false });
+        domElement.addEventListener('touchmove', onTouchMove, { passive: false });
+        domElement.addEventListener('touchend', onTouchEnd, { passive: false });
     }
 
     // Lightweight fallback when OrbitControls isn't available (offline/CDN blocked)
@@ -488,6 +570,75 @@ class SolarSystem {
             }
         }
 
+        // Touch gesture variables for pinch-to-zoom
+        let touches = [];
+        let lastTouchDistance = 0;
+        let isTouchZooming = false;
+
+        function getTouchDistance(touch1, touch2) {
+            const dx = touch1.clientX - touch2.clientX;
+            const dy = touch1.clientY - touch2.clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function onTouchStart(e) {
+            e.preventDefault();
+            touches = Array.from(e.touches);
+            
+            if (touches.length === 2) {
+                // Two finger touch - prepare for pinch zoom
+                isTouchZooming = true;
+                lastTouchDistance = getTouchDistance(touches[0], touches[1]);
+                controls._rotating = false;
+                controls._panning = false;
+            } else if (touches.length === 1) {
+                // Single finger touch - prepare for rotation
+                isTouchZooming = false;
+                controls._rotating = true;
+                startX = touches[0].clientX;
+                startY = touches[0].clientY;
+            }
+        }
+
+        function onTouchMove(e) {
+            e.preventDefault();
+            touches = Array.from(e.touches);
+            
+            if (touches.length === 2 && isTouchZooming) {
+                // Handle pinch-to-zoom
+                const currentDistance = getTouchDistance(touches[0], touches[1]);
+                const distanceChange = currentDistance - lastTouchDistance;
+                
+                if (Math.abs(distanceChange) > 1) { // Threshold to prevent jitter
+                    const zoomFactor = 1 + (distanceChange * 0.01); // Adjust sensitivity
+                    controls._spherical.radius /= zoomFactor;
+                    lastTouchDistance = currentDistance;
+                }
+            } else if (touches.length === 1 && controls._rotating) {
+                // Handle single finger rotation
+                const dx = touches[0].clientX - startX;
+                const dy = touches[0].clientY - startY;
+                startX = touches[0].clientX;
+                startY = touches[0].clientY;
+                
+                controls._spherical.theta -= dx * controls._rotateSpeed;
+                controls._spherical.phi -= dy * controls._rotateSpeed;
+            }
+        }
+
+        function onTouchEnd(e) {
+            e.preventDefault();
+            touches = Array.from(e.touches);
+            
+            if (touches.length < 2) {
+                isTouchZooming = false;
+            }
+            if (touches.length === 0) {
+                controls._rotating = false;
+                controls._panning = false;
+            }
+        }
+
         let startX = 0, startY = 0;
         function onPointerDown(e) {
             if (e.button === 0) controls._rotating = true; // left
@@ -536,6 +687,12 @@ class SolarSystem {
         domElement.addEventListener('wheel', onWheel, { passive: false });
         // Fallback: also listen on document to catch wheels when focus isn't on canvas
         document.addEventListener('wheel', onWheel, { passive: false });
+        
+        // Add touch event listeners for mobile/tablet support
+        domElement.addEventListener('touchstart', onTouchStart, { passive: false });
+        domElement.addEventListener('touchmove', onTouchMove, { passive: false });
+        domElement.addEventListener('touchend', onTouchEnd, { passive: false });
+        
         // Keyboard zoom support (+/-)
         function onKeyDown(e) {
             if (e.key === '+' || e.key === '=') { controls._spherical.radius /= controls._zoomScale; }
